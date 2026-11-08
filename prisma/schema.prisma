@@ -1,0 +1,333 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// =====================================================
+// CATEGORY
+// =====================================================
+
+model Category {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  image       String?
+  isActive    Boolean @default(true)
+
+  parentId String?
+  parent   Category?  @relation("CategoryHierarchy", fields: [parentId], references: [id])
+  children Category[] @relation("CategoryHierarchy")
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([parentId])
+  @@index([isActive])
+}
+
+// =====================================================
+// BRAND
+// =====================================================
+
+model Brand {
+  id          String  @id @default(cuid())
+  name        String
+  slug        String  @unique
+  description String?
+  logo        String?
+  isActive    Boolean @default(true)
+
+  products Product[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([isActive])
+}
+
+// =====================================================
+// PRODUCT
+// =====================================================
+
+model Product {
+  id String @id @default(cuid())
+
+  // Basic Information
+  name             String
+  slug             String  @unique
+  sku              String  @unique
+  shortDescription String?
+  description      String?
+
+  // Relations
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  brandId String?
+  brand   Brand?  @relation(fields: [brandId], references: [id])
+
+  // Pricing
+  price         Decimal  @db.Decimal(10, 2)
+  discountPrice Decimal? @db.Decimal(10, 2)
+
+  // Inventory
+  stock         Int @default(0)
+  lowStockAlert Int @default(5)
+
+  // Product Information
+  material String?
+  weight   Decimal? @db.Decimal(10, 2)
+  warranty String?
+
+  // Status
+  isActive     Boolean @default(true)
+  isFeatured   Boolean @default(false)
+  isNewArrival Boolean @default(false)
+
+  // SEO
+  metaTitle       String?
+  metaDescription String?
+
+  // Product Images
+  images ProductImage[]
+
+  // Product Variants
+  variants ProductVariant[]
+
+  // Tags
+  tags ProductTag[]
+
+  // Reviews
+  reviews Review[]
+
+  // Orders
+  orders OrderItem[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([categoryId])
+  @@index([brandId])
+  @@index([isActive])
+  @@index([isFeatured])
+  @@index([isNewArrival])
+  @@index([createdAt])
+}
+
+// =====================================================
+// PRODUCT IMAGE
+// =====================================================
+
+model ProductImage {
+  id        String @id @default(cuid())
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  url       String
+  altText   String?
+  sortOrder Int     @default(0)
+  isPrimary Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([productId])
+}
+
+// =====================================================
+// PRODUCT VARIANT
+// =====================================================
+
+model ProductVariant {
+  id        String @id @default(cuid())
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  sku      String   @unique
+  color    String?
+  size     String?
+  price    Decimal? @db.Decimal(10, 2)
+  stock    Int      @default(0)
+  image    String?
+  isActive Boolean  @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([color])
+  @@index([size])
+}
+
+// =====================================================
+// TAG
+// =====================================================
+
+model Tag {
+  id   String @id @default(cuid())
+  name String
+  slug String @unique
+
+  products ProductTag[]
+
+  createdAt DateTime @default(now())
+}
+
+// =====================================================
+// PRODUCT TAG
+// =====================================================
+
+model ProductTag {
+  productId String
+  tagId     String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([productId, tagId])
+  @@index([tagId])
+}
+
+// =====================================================
+// REVIEW
+// =====================================================
+
+model Review {
+  id        String @id @default(cuid())
+  productId String
+
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  name       String
+  email      String?
+  rating     Int
+  comment    String?
+  isApproved Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([productId])
+  @@index([rating])
+}
+
+// =====================================================
+// ORDER
+// =====================================================
+model Order {
+  id String @id @default(cuid())
+
+  orderNumber String @unique
+
+  // Customer Information
+
+  customerName String
+
+  customerPhone String
+
+  customerEmail String?
+
+  
+
+  // Shipping Information
+
+  shippingAddress String
+
+  city String
+
+  area String?
+
+  // Pricing
+
+  subtotal Decimal @db.Decimal(10, 2)
+
+  deliveryCharge Decimal @db.Decimal(10, 2)
+
+  totalAmount Decimal @db.Decimal(10, 2)
+
+  // Payment
+
+  paymentMethod String @default("COD")
+
+  paymentStatus String @default("PENDING")
+
+  // Order Status
+
+  orderStatus String @default("PENDING")
+
+  // NEW - Admin Tracking
+
+  adminNote String?
+
+  source String @default("DIRECT")
+
+  campaignName String?
+
+  // Order Items
+
+  items OrderItem[]
+
+  createdAt DateTime @default(now())
+
+  updatedAt DateTime @updatedAt
+
+  @@index([customerPhone])
+  @@index([orderStatus])
+  @@index([paymentStatus])
+  @@index([source])
+  @@index([createdAt])
+}
+
+// =====================================================
+// ORDER ITEM
+// =====================================================
+
+model OrderItem {
+  id String @id @default(cuid())
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+
+  // Product Snapshot
+  productName String
+  quantity    Int
+  price       Decimal @db.Decimal(10, 2)
+  subtotal    Decimal @db.Decimal(10, 2)
+
+  createdAt DateTime @default(now())
+
+  @@index([orderId])
+  @@index([productId])
+}
+
+// =====================================================
+// ADMIN USER
+// =====================================================
+
+model Admin {
+  id String @id @default(cuid())
+
+  name     String
+  email    String @unique
+  password String
+
+  role String @default("ADMIN")
+
+  isActive Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([email])
+  @@index([isActive])
+}
