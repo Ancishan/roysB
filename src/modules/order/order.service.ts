@@ -1,21 +1,27 @@
-import { prisma } from "../../prisma/prisma";
 
+import { prisma } from "../../prisma/prisma";
 import type { CreateOrderData } from "./order.validation";
+import { getIO } from "../../socket";
 
 const DELIVERY_CHARGE = 110;
 
 // =====================================================
-// CREATE ORDER
+// CREATE ORDER + PERSISTENT NOTIFICATION
 // =====================================================
 
 const createOrder = async (data: CreateOrderData) => {
-  return prisma.$transaction(async (tx) => {
+  const result = await prisma.$transaction(async (tx) => {
     let subtotal = 0;
 
-    const orderItems: any[] = [];
+    const orderItems: {
+      productId: string;
+      productName: string;
+      quantity: number;
+      price: number;
+      subtotal: number;
+    }[] = [];
 
-    // Check product
-
+    // 1. Validate products and calculate subtotal
     for (const item of data.items) {
       const product = await tx.product.findUnique({
         where: {
@@ -35,7 +41,9 @@ const createOrder = async (data: CreateOrderData) => {
         throw new Error(`Insufficient stock for ${product.name}`);
       }
 
-      const price = Number(product.discountPrice ?? product.price);
+      const price = Number(
+        product.discountPrice ?? product.price
+      );
 
       const itemSubtotal = price * item.quantity;
 
@@ -43,51 +51,38 @@ const createOrder = async (data: CreateOrderData) => {
 
       orderItems.push({
         productId: product.id,
-
         productName: product.name,
-
         quantity: item.quantity,
-
         price,
-
         subtotal: itemSubtotal,
       });
     }
 
+    // 2. Calculate total
     const totalAmount = subtotal + DELIVERY_CHARGE;
 
+    // 3. Create order
     const order = await tx.order.create({
       data: {
         orderNumber: `ROYS-${Date.now()}`,
 
         customerName: data.customerName,
-
         customerPhone: data.customerPhone,
-
         customerEmail: data.customerEmail,
 
         shippingAddress: data.shippingAddress,
-
         city: data.city,
-
         area: data.area,
 
         subtotal,
-
         deliveryCharge: DELIVERY_CHARGE,
-
         totalAmount,
 
         paymentMethod: "C.O.D",
-
         paymentStatus: "PENDING",
-
         orderStatus: "PENDING",
 
-        // NEW FIELDS
-
         source: data.source ?? "DIRECT",
-
         campaignName: data.campaignName,
 
         items: {
@@ -100,14 +95,12 @@ const createOrder = async (data: CreateOrderData) => {
       },
     });
 
-    // Reduce stock
-
+    // 4. Reduce product stock
     for (const item of data.items) {
       await tx.product.update({
         where: {
           id: item.productId,
         },
-
         data: {
           stock: {
             decrement: item.quantity,
@@ -116,51 +109,71 @@ const createOrder = async (data: CreateOrderData) => {
       });
     }
 
-    return order;
+    // 5. Create persistent notification
+    const notification = await tx.notification.create({
+      data: {
+        title: "New Order Received!",
+
+        message: `${order.orderNumber} from ${order.customerName}`,
+
+        type: "NEW_ORDER",
+
+        orderId: order.id,
+
+        isRead: false,
+      },
+    });
+
+    // Return both records
+    return {
+      order,
+      notification,
+    };
   });
+
+  // =====================================================
+  // 6. REAL-TIME ADMIN NOTIFICATION
+  // Emit only after successful transaction
+  // =====================================================
+
+  try {
+    getIO().to("admins").emit("new-order", {
+      id: result.notification.id,
+
+      title: result.notification.title,
+
+      message: result.notification.message,
+
+      type: result.notification.type,
+
+      orderId: result.order.id,
+
+      orderNumber: result.order.orderNumber,
+
+      customerName: result.order.customerName,
+
+      customerPhone: result.order.customerPhone,
+
+      totalAmount: Number(result.order.totalAmount),
+
+      createdAt: result.notification.createdAt,
+
+      isRead: result.notification.isRead,
+    });
+  } catch (error) {
+    console.error(
+      "Order notification could not be sent:",
+      error
+    );
+  }
+
+  return result.order;
 };
 
 // =====================================================
 // GET ALL ORDERS
 // =====================================================
 
-// const getOrders = async (
-//   page: number = 1,
-
-//   limit: number = 20,
-// ) => {
-//   const skip = (page - 1) * limit;
-
-//   const orders = await prisma.order.findMany({
-//     skip,
-
-//     take: limit,
-
-//     orderBy: {
-//       createdAt: "desc",
-//     },
-
-//     include: {
-//       items: true,
-//     },
-//   });
-
-//   const total = await prisma.order.count();
-
-//   return {
-//     orders,
-
-//     pagination: {
-//       page,
-
-//       limit,
-
-//       total,
-
-//       totalPages: Math.ceil(total / limit),
-//     },
-//   };
-// };
 const STATUSES = [
   "PENDING",
   "CONFIRMED",
@@ -176,13 +189,11 @@ const getOrders = async (
   search: string = "",
   status: string = "ALL",
 ) => {
-  // Validate pagination values
   const safePage = Math.max(1, Math.floor(page));
   const safeLimit = Math.min(100, Math.max(1, Math.floor(limit)));
 
   const skip = (safePage - 1) * safeLimit;
 
-  // Build database filters
   const where = {
     ...(status !== "ALL" && STATUSES.includes(status as any)
       ? { orderStatus: status }
@@ -213,7 +224,6 @@ const getOrders = async (
       : {}),
   };
 
-  // Fetch page data, filtered count and global status statistics
   const [
     orders,
     total,
@@ -238,15 +248,31 @@ const getOrders = async (
     }),
 
     prisma.order.count({ where }),
-
     prisma.order.count(),
 
-    prisma.order.count({ where: { orderStatus: "PENDING" } }),
-    prisma.order.count({ where: { orderStatus: "CONFIRMED" } }),
-    prisma.order.count({ where: { orderStatus: "PROCESSING" } }),
-    prisma.order.count({ where: { orderStatus: "SHIPPED" } }),
-    prisma.order.count({ where: { orderStatus: "DELIVERED" } }),
-    prisma.order.count({ where: { orderStatus: "CANCELLED" } }),
+    prisma.order.count({
+      where: { orderStatus: "PENDING" },
+    }),
+
+    prisma.order.count({
+      where: { orderStatus: "CONFIRMED" },
+    }),
+
+    prisma.order.count({
+      where: { orderStatus: "PROCESSING" },
+    }),
+
+    prisma.order.count({
+      where: { orderStatus: "SHIPPED" },
+    }),
+
+    prisma.order.count({
+      where: { orderStatus: "DELIVERED" },
+    }),
+
+    prisma.order.count({
+      where: { orderStatus: "CANCELLED" },
+    }),
   ]);
 
   return {
@@ -271,7 +297,6 @@ const getOrders = async (
   };
 };
 
-
 // =====================================================
 // GET ORDER BY ID
 // =====================================================
@@ -281,7 +306,6 @@ const getOrderById = async (id: string) => {
     where: {
       id,
     },
-
     include: {
       items: true,
     },
@@ -295,50 +319,11 @@ const getOrderById = async (id: string) => {
 };
 
 // =====================================================
-// CUSTOMER ORDER HISTORY
-// =====================================================
-
-const getCustomerOrders = async (phone: string) => {
-  const orders = await prisma.order.findMany({
-    where: {
-      customerPhone: phone,
-    },
-
-    orderBy: {
-      createdAt: "desc",
-    },
-
-    include: {
-      items: true,
-    },
-  });
-
-  const totalOrders = orders.length;
-
-  const totalSpent = orders.reduce(
-    (sum, order) => sum + Number(order.totalAmount),
-
-    0,
-  );
-
-  return {
-    customerPhone: phone,
-
-    totalOrders,
-
-    totalSpent,
-
-    orders,
-  };
-};
-
-// =====================================================
 // UPDATE ORDER STATUS
 // =====================================================
 
 const updateOrderStatus = async (
   id: string,
-
   orderStatus: string,
 ) => {
   const order = await prisma.order.findUnique({
@@ -351,21 +336,16 @@ const updateOrderStatus = async (
     throw new Error("Order not found");
   }
 
-  const flow: any = {
+  const flow: Record<string, string[]> = {
     PENDING: ["CONFIRMED", "CANCELLED"],
-
     CONFIRMED: ["PROCESSING", "CANCELLED"],
-
     PROCESSING: ["SHIPPED", "CANCELLED"],
-
     SHIPPED: ["DELIVERED"],
-
     DELIVERED: [],
-
     CANCELLED: [],
   };
 
-  if (!flow[order.orderStatus].includes(orderStatus)) {
+  if (!flow[order.orderStatus]?.includes(orderStatus)) {
     throw new Error(
       `Cannot change status from ${order.orderStatus} to ${orderStatus}`,
     );
@@ -375,7 +355,6 @@ const updateOrderStatus = async (
     where: {
       id,
     },
-
     data: {
       orderStatus,
     },
@@ -388,7 +367,6 @@ const updateOrderStatus = async (
 
 const updatePaymentStatus = async (
   id: string,
-
   paymentStatus: string,
 ) => {
   const order = await prisma.order.findUnique({
@@ -405,7 +383,6 @@ const updatePaymentStatus = async (
     where: {
       id,
     },
-
     data: {
       paymentStatus,
     },
@@ -418,7 +395,6 @@ const updatePaymentStatus = async (
 
 const updateOrderNote = async (
   id: string,
-
   adminNote: string | undefined,
 ) => {
   const order = await prisma.order.findUnique({
@@ -435,12 +411,15 @@ const updateOrderNote = async (
     where: {
       id,
     },
-
     data: {
       adminNote,
     },
   });
 };
+
+// =====================================================
+// UPDATE ORDER SOURCE
+// =====================================================
 
 const updateOrderSource = async (
   id: string,
@@ -461,7 +440,6 @@ const updateOrderSource = async (
     where: {
       id,
     },
-
     data: {
       source,
       campaignName,
@@ -469,16 +447,18 @@ const updateOrderSource = async (
   });
 };
 
+// =====================================================
+// GET CUSTOMER ORDER HISTORY
+// =====================================================
+
 const getCustomerOrderHistory = async (phone: string) => {
   const orders = await prisma.order.findMany({
     where: {
       customerPhone: phone,
     },
-
     orderBy: {
       createdAt: "desc",
     },
-
     include: {
       items: true,
     },
@@ -488,20 +468,17 @@ const getCustomerOrderHistory = async (phone: string) => {
 
   const totalPurchase = orders.reduce(
     (sum, order) => sum + Number(order.totalAmount),
-
     0,
   );
 
   return {
     phone,
-
     totalOrders,
-
     totalPurchase,
-
     orders,
   };
 };
+
 // =====================================================
 // DELETE ORDER
 // =====================================================
@@ -512,7 +489,6 @@ const deleteOrder = async (id: string) => {
       where: {
         id,
       },
-
       include: {
         items: true,
       },
@@ -522,12 +498,12 @@ const deleteOrder = async (id: string) => {
       throw new Error("Order not found");
     }
 
+    // Restore product stock
     for (const item of order.items) {
       await tx.product.update({
         where: {
           id: item.productId,
         },
-
         data: {
           stock: {
             increment: item.quantity,
@@ -544,13 +520,15 @@ const deleteOrder = async (id: string) => {
 
     return {
       message: "Order deleted successfully",
-
       orderId: id,
-
       orderNumber: order.orderNumber,
     };
   });
 };
+
+// =====================================================
+// EXPORT ORDER SERVICE
+// =====================================================
 
 export const orderService = {
   createOrder,
@@ -559,7 +537,6 @@ export const orderService = {
   updateOrderStatus,
   updatePaymentStatus,
   deleteOrder,
-
   updateOrderNote,
   updateOrderSource,
   getCustomerOrderHistory,

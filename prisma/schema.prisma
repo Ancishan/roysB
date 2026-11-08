@@ -227,55 +227,37 @@ model Order {
   orderNumber String @unique
 
   // Customer Information
-
-  customerName String
-
+  customerName  String
   customerPhone String
-
   customerEmail String?
 
-  
-
   // Shipping Information
-
   shippingAddress String
-
-  city String
-
-  area String?
+  city            String
+  area            String?
 
   // Pricing
-
-  subtotal Decimal @db.Decimal(10, 2)
-
+  subtotal       Decimal @db.Decimal(10, 2)
   deliveryCharge Decimal @db.Decimal(10, 2)
-
-  totalAmount Decimal @db.Decimal(10, 2)
+  totalAmount    Decimal @db.Decimal(10, 2)
 
   // Payment
-
   paymentMethod String @default("COD")
-
   paymentStatus String @default("PENDING")
 
   // Order Status
-
   orderStatus String @default("PENDING")
 
-  // NEW - Admin Tracking
-
-  adminNote String?
-
-  source String @default("DIRECT")
-
+  // Admin Tracking
+  adminNote    String?
+  source       String  @default("DIRECT")
   campaignName String?
 
-  // Order Items
-
-  items OrderItem[]
+  // Relations
+  items         OrderItem[]
+  notifications Notification[]
 
   createdAt DateTime @default(now())
-
   updatedAt DateTime @updatedAt
 
   @@index([customerPhone])
@@ -330,4 +312,23 @@ model Admin {
 
   @@index([email])
   @@index([isActive])
+}
+
+model Notification {
+  id String @id @default(cuid())
+
+  title   String
+  message String
+  type    String @default("NEW_ORDER")
+
+  orderId String?
+  order   Order?  @relation(fields: [orderId], references: [id], onDelete: SetNull)
+
+  isRead Boolean @default(false)
+
+  createdAt DateTime @default(now())
+
+  @@index([isRead])
+  @@index([createdAt])
+  @@index([orderId])
 }

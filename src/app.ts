@@ -11,6 +11,7 @@ import authRoutes from "./modules/auth/auth.routes"
 import adminRoutes from "./modules/admin/admin.routes";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
+import notificationRoutes from "./modules/notification/notification.route";
 const app = express();
 
 app.use(
@@ -40,7 +41,7 @@ app.use("/api/auth",authRoutes);
 app.use("/api/admin",adminRoutes);
 app.use("/api/dashboard",dashboardRoutes);
 app.use("/api/analytics",analyticsRoutes);
-
+app.use("/api/notifications", notificationRoutes);
 export default app;
 
 

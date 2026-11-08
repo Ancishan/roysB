@@ -1,88 +1,108 @@
+
 import {
-  Request,
   Response,
-  NextFunction
+  NextFunction,
+  Request,
 } from "express";
 
 import {
-  verifyToken
+  verifyToken,
 } from "../utils/jwt";
 
+// ==========================================
+// AUTH REQUEST INTERFACE
+// ==========================================
 
 export interface AuthRequest extends Request {
-
   admin?: {
-
-    id:string;
-
-    role:string;
-
+    id: string;
+    role: string;
   };
-
 }
 
-
+// ==========================================
+// ADMIN AUTH MIDDLEWARE
+// ==========================================
 
 export function authMiddleware(
+  req: AuthRequest,
+  res: Response,
+  next: NextFunction
+) {
+  try {
+    // Get Admin JWT from cookie
+    const token = req.cookies?.admin_token;
 
-req:AuthRequest,
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "Please login first",
+      });
+    }
 
-res:Response,
+    // Verify JWT
+    const decoded = verifyToken(token);
 
-next:NextFunction
+    // ==========================================
+    // DEBUG LOGS
+    // ==========================================
 
-){
+    console.log(
+      "Authenticated Admin ID:",
+      decoded.id
+    );
 
+    console.log(
+      "Authenticated Admin Role:",
+      decoded.role
+    );
 
-try{
+    console.log(
+      "Role Type:",
+      typeof decoded.role
+    );
 
+    // ==========================================
+    // ALLOWED ADMIN ROLES
+    // ==========================================
 
-const token =
-req.cookies.admin_token;
+    const allowedRoles = [
+      "ADMIN",
+      "SUPER_ADMIN",
+    ];
 
+    const userRole = decoded.role
+      ?.trim()
+      .toUpperCase();
 
+    if (
+      !decoded.id ||
+      !userRole ||
+      !allowedRoles.includes(userRole)
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: "Admin access only",
+      });
+    }
 
-if(!token){
+    // Attach Admin information to request
+    req.admin = {
+      id: decoded.id,
+      role: userRole,
+    };
 
-return res.status(401).json({
+    next();
 
-success:false,
+  } catch (error) {
+    console.error(
+      "Admin Authentication Error:",
+      error
+    );
 
-message:"Please login first"
-
-});
-
-}
-
-
-
-const decoded =
-verifyToken(token);
-
-
-
-req.admin = decoded;
-
-
-
-next();
-
-
-
-}
-catch(error){
-
-
-return res.status(401).json({
-
-success:false,
-
-message:"Invalid or expired token"
-
-});
-
-
-}
-
-
+    return res.status(401).json({
+      success: false,
+      message: "Invalid or expired token",
+    });
+  }
 }
