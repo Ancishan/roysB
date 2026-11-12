@@ -332,3 +332,128 @@ model Notification {
   @@index([createdAt])
   @@index([orderId])
 }
+
+model StoreSetting {
+  id           String @id @default("main")
+  storeName    String @default("ROYS")
+  storeEmail   String @default("")
+  storePhone   String @default("")
+  storeAddress String @default("")
+  logoUrl      String @default("")
+
+  deliveryCharge        Float @default(110)
+  freeShippingThreshold Float @default(2000)
+
+  codEnabled           Boolean @default(true)
+  onlinePaymentEnabled Boolean @default(false)
+
+  maintenanceMode Boolean @default(false)
+
+  announcementEnabled Boolean @default(true)
+  announcementText    String  @default("Free Shipping on Orders Over ৳2000")
+
+  facebookUrl  String @default("")
+  instagramUrl String @default("")
+  youtubeUrl   String @default("")
+  tiktokUrl    String @default("")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =====================================================
+// ABOUT PAGE
+// =====================================================
+
+model AboutPage {
+  id String @id @default("main")
+
+  // Company Information
+  companyTitle       String @default("About ROYS")
+  companySubtitle    String @default("")
+  heroImage          String @default("")
+  companyDescription String @default("")
+  storyTitle         String @default("Our Story")
+  storyDescription   String @default("")
+
+  // Mission
+  missionTitle       String @default("Our Mission")
+  missionDescription String @default("")
+  missionImage       String @default("")
+
+  // Vision
+  visionTitle       String @default("Our Vision")
+  visionDescription String @default("")
+  visionImage       String @default("")
+
+  // Page Status
+  isActive Boolean @default(true)
+
+  // Relations
+  teamMembers TeamMember[]
+  features    AboutFeature[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// =====================================================
+// TEAM MEMBER
+// =====================================================
+
+model TeamMember {
+  id String @id @default(cuid())
+
+  aboutPageId String    @default("main")
+  aboutPage   AboutPage @relation(fields: [aboutPageId], references: [id], onDelete: Cascade)
+
+  // Member Information
+  name        String
+  designation String
+  roleType    String @default("LEADERSHIP")
+  imageUrl    String @default("")
+  bio         String @default("")
+
+  // Contact & Social Links
+  email        String?
+  facebookUrl  String?
+  linkedinUrl  String?
+  instagramUrl String?
+
+  // Display Settings
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aboutPageId])
+  @@index([roleType])
+  @@index([isActive])
+  @@index([displayOrder])
+}
+
+// =====================================================
+// ABOUT FEATURES
+// =====================================================
+
+model AboutFeature {
+  id String @id @default(cuid())
+
+  aboutPageId String    @default("main")
+  aboutPage   AboutPage @relation(fields: [aboutPageId], references: [id], onDelete: Cascade)
+
+  title       String
+  description String @default("")
+  icon        String @default("star")
+
+  displayOrder Int     @default(0)
+  isActive     Boolean @default(true)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([aboutPageId])
+  @@index([isActive])
+  @@index([displayOrder])
+}

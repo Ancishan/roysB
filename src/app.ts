@@ -12,6 +12,10 @@ import adminRoutes from "./modules/admin/admin.routes";
 import dashboardRoutes from "./modules/dashboard/dashboard.routes";
 import analyticsRoutes from "./modules/analytics/analytics.routes";
 import notificationRoutes from "./modules/notification/notification.route";
+import settingsRoutes from "./modules/settings/settings.route";
+import aboutRoutes from "./modules/about/about.routes";
+import path from "path";
+
 const app = express();
 
 app.use(
@@ -42,6 +46,12 @@ app.use("/api/admin",adminRoutes);
 app.use("/api/dashboard",dashboardRoutes);
 app.use("/api/analytics",analyticsRoutes);
 app.use("/api/notifications", notificationRoutes);
+app.use("/api/settings", settingsRoutes);
+app.use("/api/about", aboutRoutes);
+app.use(
+  "/uploads",
+  express.static(path.join(process.cwd(), "uploads")),
+);
 export default app;
 
 

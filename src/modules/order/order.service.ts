@@ -3,7 +3,12 @@ import { prisma } from "../../prisma/prisma";
 import type { CreateOrderData } from "./order.validation";
 import { getIO } from "../../socket";
 
-const DELIVERY_CHARGE = 110;
+// =====================================================
+// DEFAULT DELIVERY SETTINGS
+// =====================================================
+
+const DEFAULT_DELIVERY_CHARGE = 110;
+const DEFAULT_FREE_SHIPPING_THRESHOLD = 2000;
 
 // =====================================================
 // CREATE ORDER + PERSISTENT NOTIFICATION
@@ -11,6 +16,21 @@ const DELIVERY_CHARGE = 110;
 
 const createOrder = async (data: CreateOrderData) => {
   const result = await prisma.$transaction(async (tx) => {
+
+    // 1. Get store settings from database
+    const settings = await tx.storeSetting.findUnique({
+      where: {
+        id: "main",
+      },
+    });
+
+    // 2. Check maintenance mode
+    if (settings?.maintenanceMode) {
+      throw new Error(
+        "Store is currently under maintenance. Please try again later."
+      );
+    }
+
     let subtotal = 0;
 
     const orderItems: {
@@ -21,7 +41,7 @@ const createOrder = async (data: CreateOrderData) => {
       subtotal: number;
     }[] = [];
 
-    // 1. Validate products and calculate subtotal
+    // 3. Validate products and calculate subtotal
     for (const item of data.items) {
       const product = await tx.product.findUnique({
         where: {
@@ -58,10 +78,22 @@ const createOrder = async (data: CreateOrderData) => {
       });
     }
 
-    // 2. Calculate total
-    const totalAmount = subtotal + DELIVERY_CHARGE;
+    // 4. Calculate dynamic delivery charge
+    const deliveryChargeAmount =
+      settings?.deliveryCharge ?? DEFAULT_DELIVERY_CHARGE;
 
-    // 3. Create order
+    const freeShippingThreshold =
+      settings?.freeShippingThreshold ??
+      DEFAULT_FREE_SHIPPING_THRESHOLD;
+
+    const deliveryCharge =
+      subtotal >= freeShippingThreshold
+        ? 0
+        : deliveryChargeAmount;
+
+    const totalAmount = subtotal + deliveryCharge;
+
+    // 5. Create order
     const order = await tx.order.create({
       data: {
         orderNumber: `ROYS-${Date.now()}`,
@@ -75,7 +107,7 @@ const createOrder = async (data: CreateOrderData) => {
         area: data.area,
 
         subtotal,
-        deliveryCharge: DELIVERY_CHARGE,
+        deliveryCharge,
         totalAmount,
 
         paymentMethod: "C.O.D",
@@ -95,7 +127,7 @@ const createOrder = async (data: CreateOrderData) => {
       },
     });
 
-    // 4. Reduce product stock
+    // 6. Reduce product stock
     for (const item of data.items) {
       await tx.product.update({
         where: {
@@ -109,7 +141,7 @@ const createOrder = async (data: CreateOrderData) => {
       });
     }
 
-    // 5. Create persistent notification
+    // 7. Create persistent notification
     const notification = await tx.notification.create({
       data: {
         title: "New Order Received!",
@@ -132,7 +164,7 @@ const createOrder = async (data: CreateOrderData) => {
   });
 
   // =====================================================
-  // 6. REAL-TIME ADMIN NOTIFICATION
+  // 8. REAL-TIME ADMIN NOTIFICATION
   // Emit only after successful transaction
   // =====================================================
 
@@ -195,7 +227,7 @@ const getOrders = async (
   const skip = (safePage - 1) * safeLimit;
 
   const where = {
-    ...(status !== "ALL" && STATUSES.includes(status as any)
+    ...(status !== "ALL" && STATUSES.includes(status)
       ? { orderStatus: status }
       : {}),
 
@@ -336,29 +368,20 @@ const updateOrderStatus = async (
     throw new Error("Order not found");
   }
 
-  const flow: Record<string, string[]> = {
-    PENDING: ["CONFIRMED", "CANCELLED"],
-    CONFIRMED: ["PROCESSING", "CANCELLED"],
-    PROCESSING: ["SHIPPED", "CANCELLED"],
-    SHIPPED: ["DELIVERED"],
-    DELIVERED: [],
-    CANCELLED: [],
-  };
-
-  if (!flow[order.orderStatus]?.includes(orderStatus)) {
-    throw new Error(
-      `Cannot change status from ${order.orderStatus} to ${orderStatus}`,
-    );
-  }
-
-  return prisma.order.update({
+  // Admin can change order status freely
+  const updatedOrder = await prisma.order.update({
     where: {
       id,
     },
     data: {
-      orderStatus,
+      orderStatus: orderStatus as any,
+    },
+    include: {
+      items: true,
     },
   });
+
+  return updatedOrder;
 };
 
 // =====================================================
