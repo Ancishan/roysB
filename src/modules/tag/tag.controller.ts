@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-
 import { tagService } from "./tag.service";
+import { getParamId } from "../../utils/getParamId";
 
 import {
   createTagSchema,
@@ -78,7 +78,7 @@ const getTagById = async (
   try {
     const tag =
       await tagService.getTagById(
-        req.params.id
+        getParamId(req.params.id)
       );
 
     if (!tag) {
@@ -118,7 +118,7 @@ const updateTag = async (
 
     const tag =
       await tagService.updateTag(
-        req.params.id,
+        getParamId(req.params.id),
         data
       );
 
@@ -157,7 +157,7 @@ const deleteTag = async (
 ) => {
   try {
     await tagService.deleteTag(
-      req.params.id
+      getParamId(req.params.id)
     );
 
     res.status(200).json({

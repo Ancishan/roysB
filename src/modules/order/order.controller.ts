@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { getParamId } from "../../utils/getParamId";
 
 import {
   createOrderSchema,
@@ -18,7 +19,7 @@ const createOrder = async (req: Request, res: Response) => {
   try {
     const data = createOrderSchema.parse(req.body);
 
-    const order = await orderService.createOrder(data);
+    const order = await orderService.getOrderById(getParamId(req.params.id));
 
     return res.status(201).json({
       success: true,
@@ -73,12 +74,7 @@ const getOrders = async (req: Request, res: Response) => {
     const search = String(req.query.search || "");
     const status = String(req.query.status || "ALL");
 
-    const result = await orderService.getOrders(
-      page,
-      limit,
-      search,
-      status,
-    );
+    const result = await orderService.getOrders(page, limit, search, status);
 
     return res.status(200).json({
       success: true,
@@ -101,7 +97,9 @@ const getOrders = async (req: Request, res: Response) => {
 
 const getOrderById = async (req: Request, res: Response) => {
   try {
-    const order = await orderService.getOrderById(req.params.id as string);
+    const order = await orderService.getOrderById(
+      getParamId(req.params.id) as string,
+    );
 
     return res.status(200).json({
       success: true,
@@ -123,27 +121,28 @@ const getOrderById = async (req: Request, res: Response) => {
 // CUSTOMER ORDER HISTORY
 // =====================================================
 
+
 const getCustomerOrders = async (req: Request, res: Response) => {
   try {
-    const result = await orderService.getCustomerOrders(
-      req.params.phone as string,
+    const phone = getParamId(req.params.phone);
+
+    const result = await orderService.getCustomerOrderHistory(
+      phone
     );
 
     return res.status(200).json({
       success: true,
-
       message: "Customer order history retrieved successfully",
-
       data: result,
     });
   } catch (error: any) {
     return res.status(400).json({
       success: false,
-
       message: error.message,
     });
   }
 };
+
 
 // =====================================================
 // UPDATE ORDER STATUS
@@ -154,7 +153,7 @@ const updateOrderStatus = async (req: Request, res: Response) => {
     const data = updateOrderStatusSchema.parse(req.body);
 
     const order = await orderService.updateOrderStatus(
-      req.params.id as string,
+getParamId(req.params.id),
 
       data.orderStatus,
     );
@@ -184,7 +183,7 @@ const updatePaymentStatus = async (req: Request, res: Response) => {
     const data = updatePaymentStatusSchema.parse(req.body);
 
     const order = await orderService.updatePaymentStatus(
-      req.params.id as string,
+     getParamId(req.params.id) as string,
 
       data.paymentStatus,
     );
@@ -214,7 +213,7 @@ const updateOrderNote = async (req: Request, res: Response) => {
     const data = updateOrderNoteSchema.parse(req.body);
 
     const order = await orderService.updateOrderNote(
-      req.params.id as string,
+      getParamId(req.params.id)as string,
 
       data.adminNote || "",
     );
@@ -244,7 +243,7 @@ const updateOrderSource = async (req: Request, res: Response) => {
     const data = updateOrderSourceSchema.parse(req.body);
 
     const order = await orderService.updateOrderSource(
-      req.params.id as string,
+      getParamId(req.params.id) as string,
 
       data.source,
 
@@ -273,7 +272,9 @@ const updateOrderSource = async (req: Request, res: Response) => {
 
 const deleteOrder = async (req: Request, res: Response) => {
   try {
-    const result = await orderService.deleteOrder(req.params.id as string);
+    const result = await orderService.deleteOrder(
+      getParamId(req.params.id) as string,
+    );
 
     return res.status(200).json({
       success: true,

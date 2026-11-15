@@ -6,6 +6,7 @@ import {
 import {
   notificationService,
 } from "./notification.service";
+import { getParamId } from "../../utils/getParamId";
 
 export const notificationController = {
 
@@ -36,12 +37,14 @@ export const notificationController = {
   },
 
   // MARK ONE AS READ
+
+  // MARK ONE AS READ
   markAsRead: async (
     req: Request,
     res: Response
   ) => {
     try {
-      const { id } = req.params;
+      const id = getParamId(req.params.id);
 
       const notification =
         await notificationService.markAsRead(id);
@@ -59,6 +62,7 @@ export const notificationController = {
       });
     }
   },
+
 
   // MARK ALL AS READ
   markAllAsRead: async (

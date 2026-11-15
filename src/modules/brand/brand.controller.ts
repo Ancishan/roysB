@@ -1,7 +1,7 @@
 import { Request, Response } from "express";
 
 import { brandService } from "./brand.service";
-
+import { getParamId } from "../../utils/getParamId";
 import {
   createBrandSchema,
   updateBrandSchema,
@@ -116,7 +116,7 @@ const getBrandById = async (
 
     const brand =
       await brandService.getBrandById(
-        req.params.id as string
+        getParamId(req.params.id) as string
       );
 
 
@@ -187,7 +187,7 @@ const updateBrand = async (
     const brand =
       await brandService.updateBrand(
 
-        req.params.id as string,
+        getParamId(req.params.id) as string,
 
         data
 
@@ -237,7 +237,7 @@ const deleteBrand = async (
 
 
     await brandService.deleteBrand(
-      req.params.id as string
+      getParamId(req.params.id) as string
     );
 
 

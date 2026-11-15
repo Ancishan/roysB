@@ -1,6 +1,6 @@
 import { Request, Response } from "express";
-
 import { categoryService } from "./category.service";
+import { getParamId } from "../../utils/getParamId";
 
 import {
   createCategorySchema,
@@ -60,7 +60,7 @@ const getCategoryById = async (
   try {
     const category =
       await categoryService.getCategoryById(
-        req.params.id
+        getParamId(req.params.id)
       );
 
     if (!category) {
@@ -94,7 +94,7 @@ const updateCategory = async (
 
     const category =
       await categoryService.updateCategory(
-        req.params.id,
+        getParamId(req.params.id),
         data
       );
 
@@ -118,7 +118,7 @@ const deleteCategory = async (
 ) => {
   try {
     await categoryService.deleteCategory(
-      req.params.id
+      getParamId(req.params.id)
     );
 
     res.status(200).json({

@@ -1,4 +1,3 @@
-
 import { prisma } from "../../prisma/prisma";
 
 // ==========================================
@@ -7,16 +6,10 @@ import { prisma } from "../../prisma/prisma";
 
 const pageInclude = {
   teamMembers: {
-    orderBy: [
-      { displayOrder: "asc" as const },
-      { createdAt: "asc" as const },
-    ],
+    orderBy: [{ displayOrder: "asc" as const }, { createdAt: "asc" as const }],
   },
   features: {
-    orderBy: [
-      { displayOrder: "asc" as const },
-      { createdAt: "asc" as const },
-    ],
+    orderBy: [{ displayOrder: "asc" as const }, { createdAt: "asc" as const }],
   },
 };
 
@@ -38,19 +31,13 @@ export const aboutService = {
           where: {
             isActive: true,
           },
-          orderBy: [
-            { displayOrder: "asc" },
-            { createdAt: "asc" },
-          ],
+          orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
         },
         features: {
           where: {
             isActive: true,
           },
-          orderBy: [
-            { displayOrder: "asc" },
-            { createdAt: "asc" },
-          ],
+          orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
         },
       },
     });
@@ -146,9 +133,7 @@ export const aboutService = {
           : undefined,
 
       isActive:
-        payload.isActive !== undefined
-          ? Boolean(payload.isActive)
-          : undefined,
+        payload.isActive !== undefined ? Boolean(payload.isActive) : undefined,
     };
 
     return prisma.aboutPage.upsert({
@@ -158,8 +143,11 @@ export const aboutService = {
       update: data,
       create: {
         id: "main",
-        companyTitle: getText(payload.companyTitle) || "About ROYS",
         ...data,
+        companyTitle:
+          getText(payload.companyTitle) ||
+          getText(data.companyTitle) ||
+          "About ROYS",
       },
       include: pageInclude,
     });
@@ -183,10 +171,7 @@ export const aboutService = {
         name,
         designation,
 
-        roleType:
-          payload.roleType === "GENERAL"
-            ? "GENERAL"
-            : "LEADERSHIP",
+        roleType: payload.roleType === "GENERAL" ? "GENERAL" : "LEADERSHIP",
 
         imageUrl: getText(payload.imageUrl),
         bio: getText(payload.bio),
@@ -199,9 +184,7 @@ export const aboutService = {
         displayOrder: Number(payload.displayOrder) || 0,
 
         isActive:
-          payload.isActive === undefined
-            ? true
-            : Boolean(payload.isActive),
+          payload.isActive === undefined ? true : Boolean(payload.isActive),
       },
     });
   },
@@ -210,10 +193,7 @@ export const aboutService = {
   // UPDATE TEAM MEMBER
   // ========================================
 
-  async updateTeamMember(
-    id: string,
-    payload: Record<string, unknown>,
-  ) {
+  async updateTeamMember(id: string, payload: Record<string, unknown>) {
     const data: Record<string, unknown> = {};
 
     const stringFields = [
@@ -243,10 +223,7 @@ export const aboutService = {
     }
 
     if (payload.roleType !== undefined) {
-      data.roleType =
-        payload.roleType === "GENERAL"
-          ? "GENERAL"
-          : "LEADERSHIP";
+      data.roleType = payload.roleType === "GENERAL" ? "GENERAL" : "LEADERSHIP";
     }
 
     if (payload.displayOrder !== undefined) {
@@ -293,9 +270,7 @@ export const aboutService = {
         displayOrder: Number(payload.displayOrder) || 0,
 
         isActive:
-          payload.isActive === undefined
-            ? true
-            : Boolean(payload.isActive),
+          payload.isActive === undefined ? true : Boolean(payload.isActive),
       },
     });
   },
@@ -304,10 +279,7 @@ export const aboutService = {
   // UPDATE ABOUT FEATURE
   // ========================================
 
-  async updateFeature(
-    id: string,
-    payload: Record<string, unknown>,
-  ) {
+  async updateFeature(id: string, payload: Record<string, unknown>) {
     const data: Record<string, unknown> = {};
 
     if (payload.title !== undefined) {

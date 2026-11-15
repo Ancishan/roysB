@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 
 import { reviewService } from "./review.service";
+import { getParamId } from "../../utils/getParamId";
 
 import {
   createReviewSchema,
@@ -75,7 +76,7 @@ const getReviewById = async (
   try {
     const review =
       await reviewService.getReviewById(
-        req.params.id
+        getParamId(req.params.id)
       );
 
     if (!review) {
@@ -111,7 +112,7 @@ const updateReview = async (
 
     const review =
       await reviewService.updateReview(
-        req.params.id,
+        getParamId(req.params.id),
         data
       );
 
@@ -146,7 +147,7 @@ const deleteReview = async (
 ) => {
   try {
     await reviewService.deleteReview(
-      req.params.id
+      getParamId(req.params.id)
     );
 
     res.status(200).json({

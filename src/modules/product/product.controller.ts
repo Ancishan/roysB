@@ -3,7 +3,7 @@ import { Request, Response } from "express";
 import { productService } from "./product.service";
 
 import { createProductSchema, updateProductSchema } from "./product.validation";
-
+import { getParamId } from "../../utils/getParamId";
 // --------------------------------------------------
 // CREATE PRODUCT
 // --------------------------------------------------
@@ -61,7 +61,7 @@ const getProducts = async (_req: Request, res: Response) => {
 const getProductById = async (req: Request, res: Response) => {
   try {
     const product = await productService.getProductById(
-      req.params.id as string,
+      getParamId(req.params.id) as string,
     );
 
     if (!product) {
@@ -97,7 +97,7 @@ const updateProduct = async (req: Request, res: Response) => {
     const data = updateProductSchema.parse(req.body);
 
     const product = await productService.updateProduct(
-      req.params.id as string,
+      getParamId(req.params.id) as string,
 
       data,
     );
@@ -134,7 +134,7 @@ const updateProduct = async (req: Request, res: Response) => {
 
 const deleteProduct = async (req: Request, res: Response) => {
   try {
-    await productService.deleteProduct(req.params.id as string);
+    await productService.deleteProduct(getParamId(req.params.id) as string);
 
     return res.status(200).json({
       success: true,

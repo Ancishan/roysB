@@ -1,6 +1,7 @@
 
 import type { Request, Response } from "express";
 import { aboutService } from "./about.service";
+import { getParamId } from "../../utils/getParamId";
 
 const handleError = (res: Response, error: unknown) => {
   const message =
@@ -90,7 +91,7 @@ createTeamMember: async (req: Request, res: Response) => {
   async updateTeamMember(req: Request, res: Response) {
     try {
       const data = await aboutService.updateTeamMember(
-        req.params.id,
+        getParamId(req.params.id),
         req.body ?? {},
       );
 
@@ -107,7 +108,7 @@ createTeamMember: async (req: Request, res: Response) => {
   // DELETE TEAM MEMBER
   async deleteTeamMember(req: Request, res: Response) {
     try {
-      await aboutService.deleteTeamMember(req.params.id);
+      await aboutService.deleteTeamMember(getParamId(req.params.id));
 
       return res.status(200).json({
         success: true,
@@ -139,7 +140,7 @@ createTeamMember: async (req: Request, res: Response) => {
   async updateFeature(req: Request, res: Response) {
     try {
       const data = await aboutService.updateFeature(
-        req.params.id,
+        getParamId(req.params.id),
         req.body ?? {},
       );
 
@@ -156,7 +157,7 @@ createTeamMember: async (req: Request, res: Response) => {
   // DELETE FEATURE
   async deleteFeature(req: Request, res: Response) {
     try {
-      await aboutService.deleteFeature(req.params.id);
+      await aboutService.deleteFeature(getParamId(req.params.id));
 
       return res.status(200).json({
         success: true,
