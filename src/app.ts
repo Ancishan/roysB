@@ -23,9 +23,9 @@ const app = express();
 // Allowed frontend origins
 const allowedOrigins = new Set(
   [
+    "https://roys-self.vercel.app",
     "http://localhost:3000",
-    "https://roys-git-main-ancishans-projects.vercel.app",
-    "https://roys-cane4d1c1-ancishans-projects.vercel.app",
+   
     process.env.FRONTEND_URL,
   ].filter((value): value is string => Boolean(value))
 );
