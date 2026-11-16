@@ -21,22 +21,33 @@ import aboutRoutes from "./modules/about/about.routes";
 const app = express();
 
 // Allowed frontend origins
-const allowedOrigins = new Set(
-  [
-    "https://roys-self.vercel.app",
-    "http://localhost:3000",
-   
-    process.env.FRONTEND_URL,
-  ].filter((value): value is string => Boolean(value))
-);
+const allowedOrigins = [
+  "https://roys-self.vercel.app",
+  "http://localhost:3000",
+
+  ...(process.env.FRONTEND_URL || "")
+    .split(",")
+    .map((url) => url.trim())
+    .filter(Boolean),
+];
+
+// Vercel preview deployment URLs
+const vercelPreviewPattern =
+  /^https:\/\/roys(?:-[a-z0-9-]+)?-ancishans-projects\.vercel\.app$/;
 
 // CORS configuration
 app.use(
   cors({
     origin: (origin, callback) => {
-      if (!origin || allowedOrigins.has(origin)) {
+      if (
+        !origin ||
+        allowedOrigins.includes(origin) ||
+        vercelPreviewPattern.test(origin)
+      ) {
         return callback(null, true);
       }
+
+      console.error("Blocked CORS origin:", origin);
 
       return callback(
         new Error(`CORS blocked for origin: ${origin}`)
