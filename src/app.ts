@@ -24,6 +24,8 @@ const app = express();
 const allowedOrigins = new Set(
   [
     "http://localhost:3000",
+    "https://roys-git-main-ancishans-projects.vercel.app",
+    "https://roys-cane4d1c1-ancishans-projects.vercel.app",
     process.env.FRONTEND_URL,
   ].filter((value): value is string => Boolean(value))
 );
