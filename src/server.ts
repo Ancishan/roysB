@@ -4,7 +4,7 @@ import "dotenv/config";
 import http from "http";
 import app from "./app";
 import { initializeSocket } from "./socket";
-import { prisma } from "../src/prisma/prisma";
+import { prisma } from "./prisma/prisma";
 
 const PORT = Number(process.env.PORT) || 5000;
 
