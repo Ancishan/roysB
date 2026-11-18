@@ -12,7 +12,6 @@ const router = Router();
 
 router.get(
   "/public",
-  authMiddleware,
   aboutController.getPublicAbout,
 );
 
