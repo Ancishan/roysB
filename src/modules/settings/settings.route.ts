@@ -1,3 +1,4 @@
+
 import { Router, type Response, type NextFunction } from "express";
 
 import { settingsController } from "./settings.controller";
@@ -25,13 +26,12 @@ const adminOnly = (
 };
 
 // Public: Customer can read store settings
-// Public settings - Customer access
 router.get("/public", settingsController.getPublicSettings);
 
-// Admin settings - Protected
-router.get("/",  settingsController.getSettings);
+// Admin: Only authenticated admins can read settings
+router.get("/", authMiddleware, adminOnly, settingsController.getSettings);
 
-// Protected: Only Admin can update settings
-router.patch("/", authMiddleware, settingsController.updateSettings);
+// Admin: Only authenticated admins can update settings
+router.patch("/", authMiddleware, adminOnly, settingsController.updateSettings);
 
 export default router;
