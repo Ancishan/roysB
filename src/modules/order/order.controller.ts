@@ -15,27 +15,32 @@ import { orderService } from "./order.service";
 // CREATE ORDER
 // =====================================================
 
+
 const createOrder = async (req: Request, res: Response) => {
   try {
+    // 1. Validate request body
     const data = createOrderSchema.parse(req.body);
 
-    const order = await orderService.getOrderById(getParamId(req.params.id));
+    // 2. Create new order in database
+    const order = await orderService.createOrder(data);
 
+    // 3. Send successful response
     return res.status(201).json({
       success: true,
-
       message: "Order created successfully",
-
       data: order,
     });
+
   } catch (error: any) {
+    console.error("CREATE ORDER ERROR:", error);
+
     return res.status(400).json({
       success: false,
-
       message: error.message || "Failed to create order",
     });
   }
 };
+
 
 // =====================================================
 // GET ALL ORDERS
