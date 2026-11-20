@@ -1,20 +1,38 @@
-import { prisma } from "../../prisma/prisma";
 
-// ==========================================
-// ABOUT PAGE SERVICE
-// ==========================================
+import { prisma } from "../../prisma/prisma";
 
 const pageInclude = {
   teamMembers: {
-    orderBy: [{ displayOrder: "asc" as const }, { createdAt: "asc" as const }],
+    orderBy: [
+      { displayOrder: "asc" as const },
+      { createdAt: "asc" as const },
+    ],
   },
   features: {
-    orderBy: [{ displayOrder: "asc" as const }, { createdAt: "asc" as const }],
+    orderBy: [
+      { displayOrder: "asc" as const },
+      { createdAt: "asc" as const },
+    ],
   },
 };
 
 const getText = (value: unknown): string =>
   typeof value === "string" ? value.trim() : "";
+
+const getBoolean = (value: unknown, fallback = true): boolean => {
+  if (typeof value === "boolean") return value;
+  if (value === "true") return true;
+  if (value === "false") return false;
+  return fallback;
+};
+
+const getNumber = (value: unknown): number => {
+  const number = Number(value);
+  return Number.isFinite(number) ? number : 0;
+};
+
+const nullableText = (value: unknown): string | null =>
+  getText(value) || null;
 
 export const aboutService = {
   // ========================================
@@ -23,21 +41,21 @@ export const aboutService = {
 
   async getPublicAbout() {
     const about = await prisma.aboutPage.findUnique({
-      where: {
-        id: "main",
-      },
+      where: { id: "main" },
       include: {
         teamMembers: {
-          where: {
-            isActive: true,
-          },
-          orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
+          where: { isActive: true },
+          orderBy: [
+            { displayOrder: "asc" },
+            { createdAt: "asc" },
+          ],
         },
         features: {
-          where: {
-            isActive: true,
-          },
-          orderBy: [{ displayOrder: "asc" }, { createdAt: "asc" }],
+          where: { isActive: true },
+          orderBy: [
+            { displayOrder: "asc" },
+            { createdAt: "asc" },
+          ],
         },
       },
     });
@@ -50,104 +68,58 @@ export const aboutService = {
   },
 
   // ========================================
-  // ADMIN GET ABOUT PAGE
+  // ADMIN ABOUT PAGE
   // ========================================
 
   async getAdminAbout() {
     return prisma.aboutPage.upsert({
-      where: {
-        id: "main",
-      },
+      where: { id: "main" },
       update: {},
-      create: {
-        id: "main",
-      },
+      create: { id: "main" },
       include: pageInclude,
     });
   },
 
   // ========================================
-  // UPDATE ABOUT PAGE INFORMATION
+  // UPDATE ABOUT PAGE
   // ========================================
 
   async updateAboutPage(payload: Record<string, unknown>) {
-    const data = {
-      companyTitle:
-        payload.companyTitle !== undefined
-          ? getText(payload.companyTitle)
-          : undefined,
+    const fields = [
+      "companyTitle",
+      "companySubtitle",
+      "heroImage",
+      "companyDescription",
+      "storyTitle",
+      "storyDescription",
+      "missionTitle",
+      "missionDescription",
+      "missionImage",
+      "visionTitle",
+      "visionDescription",
+      "visionImage",
+    ] as const;
 
-      companySubtitle:
-        payload.companySubtitle !== undefined
-          ? getText(payload.companySubtitle)
-          : undefined,
+    const data: Record<string, unknown> = {};
 
-      heroImage:
-        payload.heroImage !== undefined
-          ? getText(payload.heroImage)
-          : undefined,
+    for (const field of fields) {
+      if (payload[field] !== undefined) {
+        data[field] = getText(payload[field]);
+      }
+    }
 
-      companyDescription:
-        payload.companyDescription !== undefined
-          ? getText(payload.companyDescription)
-          : undefined,
-
-      storyTitle:
-        payload.storyTitle !== undefined
-          ? getText(payload.storyTitle)
-          : undefined,
-
-      storyDescription:
-        payload.storyDescription !== undefined
-          ? getText(payload.storyDescription)
-          : undefined,
-
-      missionTitle:
-        payload.missionTitle !== undefined
-          ? getText(payload.missionTitle)
-          : undefined,
-
-      missionDescription:
-        payload.missionDescription !== undefined
-          ? getText(payload.missionDescription)
-          : undefined,
-
-      missionImage:
-        payload.missionImage !== undefined
-          ? getText(payload.missionImage)
-          : undefined,
-
-      visionTitle:
-        payload.visionTitle !== undefined
-          ? getText(payload.visionTitle)
-          : undefined,
-
-      visionDescription:
-        payload.visionDescription !== undefined
-          ? getText(payload.visionDescription)
-          : undefined,
-
-      visionImage:
-        payload.visionImage !== undefined
-          ? getText(payload.visionImage)
-          : undefined,
-
-      isActive:
-        payload.isActive !== undefined ? Boolean(payload.isActive) : undefined,
-    };
+    if (payload.isActive !== undefined) {
+      data.isActive = getBoolean(payload.isActive);
+    }
 
     return prisma.aboutPage.upsert({
-      where: {
-        id: "main",
-      },
+      where: { id: "main" },
       update: data,
       create: {
         id: "main",
         ...data,
         companyTitle:
-          getText(payload.companyTitle) ||
-          getText(data.companyTitle) ||
-          "About ROYS",
+          getText(payload.companyTitle) || "About ROYS",
       },
       include: pageInclude,
     });
@@ -165,26 +137,34 @@ export const aboutService = {
       throw new Error("Name and designation are required.");
     }
 
+    // Ensure the About page exists first.
+    await prisma.aboutPage.upsert({
+      where: { id: "main" },
+      update: {},
+      create: { id: "main" },
+    });
+
     return prisma.teamMember.create({
       data: {
         aboutPageId: "main",
         name,
         designation,
 
-        roleType: payload.roleType === "GENERAL" ? "GENERAL" : "LEADERSHIP",
+        roleType:
+          payload.roleType === "GENERAL"
+            ? "GENERAL"
+            : "LEADERSHIP",
 
         imageUrl: getText(payload.imageUrl),
         bio: getText(payload.bio),
 
-        email: getText(payload.email) || null,
-        facebookUrl: getText(payload.facebookUrl) || null,
-        linkedinUrl: getText(payload.linkedinUrl) || null,
-        instagramUrl: getText(payload.instagramUrl) || null,
+        email: nullableText(payload.email),
+        facebookUrl: nullableText(payload.facebookUrl),
+        linkedinUrl: nullableText(payload.linkedinUrl),
+        instagramUrl: nullableText(payload.instagramUrl),
 
-        displayOrder: Number(payload.displayOrder) || 0,
-
-        isActive:
-          payload.isActive === undefined ? true : Boolean(payload.isActive),
+        displayOrder: getNumber(payload.displayOrder),
+        isActive: getBoolean(payload.isActive),
       },
     });
   },
@@ -193,7 +173,10 @@ export const aboutService = {
   // UPDATE TEAM MEMBER
   // ========================================
 
-  async updateTeamMember(id: string, payload: Record<string, unknown>) {
+  async updateTeamMember(
+    id: string,
+    payload: Record<string, unknown>
+  ) {
     const data: Record<string, unknown> = {};
 
     const stringFields = [
@@ -201,37 +184,40 @@ export const aboutService = {
       "designation",
       "imageUrl",
       "bio",
+    ];
+
+    for (const field of stringFields) {
+      if (payload[field] !== undefined) {
+        data[field] = getText(payload[field]);
+      }
+    }
+
+    const nullableFields = [
       "email",
       "facebookUrl",
       "linkedinUrl",
       "instagramUrl",
     ];
 
-    for (const field of stringFields) {
+    for (const field of nullableFields) {
       if (payload[field] !== undefined) {
-        const value = getText(payload[field]);
-
-        data[field] = [
-          "email",
-          "facebookUrl",
-          "linkedinUrl",
-          "instagramUrl",
-        ].includes(field)
-          ? value || null
-          : value;
+        data[field] = nullableText(payload[field]);
       }
     }
 
     if (payload.roleType !== undefined) {
-      data.roleType = payload.roleType === "GENERAL" ? "GENERAL" : "LEADERSHIP";
+      data.roleType =
+        payload.roleType === "GENERAL"
+          ? "GENERAL"
+          : "LEADERSHIP";
     }
 
     if (payload.displayOrder !== undefined) {
-      data.displayOrder = Number(payload.displayOrder) || 0;
+      data.displayOrder = getNumber(payload.displayOrder);
     }
 
     if (payload.isActive !== undefined) {
-      data.isActive = Boolean(payload.isActive);
+      data.isActive = getBoolean(payload.isActive);
     }
 
     return prisma.teamMember.update({
@@ -251,35 +237,42 @@ export const aboutService = {
   },
 
   // ========================================
-  // CREATE ABOUT FEATURE
+  // CREATE GOAL / FEATURE
   // ========================================
 
   async createFeature(payload: Record<string, unknown>) {
     const title = getText(payload.title);
 
     if (!title) {
-      throw new Error("Feature title is required.");
+      throw new Error("Goal title is required.");
     }
+
+    await prisma.aboutPage.upsert({
+      where: { id: "main" },
+      update: {},
+      create: { id: "main" },
+    });
 
     return prisma.aboutFeature.create({
       data: {
         aboutPageId: "main",
         title,
         description: getText(payload.description),
-        icon: getText(payload.icon) || "star",
-        displayOrder: Number(payload.displayOrder) || 0,
-
-        isActive:
-          payload.isActive === undefined ? true : Boolean(payload.isActive),
+        icon: getText(payload.icon) || "target",
+        displayOrder: getNumber(payload.displayOrder),
+        isActive: getBoolean(payload.isActive),
       },
     });
   },
 
   // ========================================
-  // UPDATE ABOUT FEATURE
+  // UPDATE GOAL / FEATURE
   // ========================================
 
-  async updateFeature(id: string, payload: Record<string, unknown>) {
+  async updateFeature(
+    id: string,
+    payload: Record<string, unknown>
+  ) {
     const data: Record<string, unknown> = {};
 
     if (payload.title !== undefined) {
@@ -295,11 +288,11 @@ export const aboutService = {
     }
 
     if (payload.displayOrder !== undefined) {
-      data.displayOrder = Number(payload.displayOrder) || 0;
+      data.displayOrder = getNumber(payload.displayOrder);
     }
 
     if (payload.isActive !== undefined) {
-      data.isActive = Boolean(payload.isActive);
+      data.isActive = getBoolean(payload.isActive);
     }
 
     return prisma.aboutFeature.update({
@@ -309,7 +302,7 @@ export const aboutService = {
   },
 
   // ========================================
-  // DELETE ABOUT FEATURE
+  // DELETE GOAL / FEATURE
   // ========================================
 
   async deleteFeature(id: string) {

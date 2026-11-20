@@ -3,7 +3,7 @@ import { Router } from "express";
 
 import { aboutController } from "./about.controller";
 import { authMiddleware } from "../../middleware/auth.middleware";
-import { teamImageUpload } from "../../middleware/teamUpload";
+
 const router = Router();
 
 // ==========================================
@@ -12,7 +12,7 @@ const router = Router();
 
 router.get(
   "/public",
-  aboutController.getPublicAbout,
+  aboutController.getPublicAbout
 );
 
 // ==========================================
@@ -22,13 +22,13 @@ router.get(
 router.get(
   "/admin",
   authMiddleware,
-  aboutController.getAdminAbout,
+  aboutController.getAdminAbout
 );
 
 router.patch(
   "/page",
   authMiddleware,
-  aboutController.updateAboutPage,
+  aboutController.updateAboutPage
 );
 
 // ==========================================
@@ -38,42 +38,41 @@ router.patch(
 router.post(
   "/team",
   authMiddleware,
-  teamImageUpload.single("image"),
-  aboutController.createTeamMember,
+  aboutController.createTeamMember
 );
 
 router.patch(
   "/team/:id",
   authMiddleware,
-  aboutController.updateTeamMember,
+  aboutController.updateTeamMember
 );
 
 router.delete(
   "/team/:id",
   authMiddleware,
-  aboutController.deleteTeamMember,
+  aboutController.deleteTeamMember
 );
 
 // ==========================================
-// FEATURES ROUTES
+// GOALS / FEATURES ROUTES
 // ==========================================
 
 router.post(
   "/features",
   authMiddleware,
-  aboutController.createFeature,
+  aboutController.createFeature
 );
 
 router.patch(
   "/features/:id",
   authMiddleware,
-  aboutController.updateFeature,
+  aboutController.updateFeature
 );
 
 router.delete(
   "/features/:id",
   authMiddleware,
-  aboutController.deleteFeature,
+  aboutController.deleteFeature
 );
 
 export default router;

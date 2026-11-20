@@ -10,7 +10,7 @@ const handleError = (res: Response, error: unknown) => {
       : "Something went wrong.";
 
   const isValidationError =
-    message.includes("required");
+    message.toLowerCase().includes("required");
 
   return res.status(isValidationError ? 400 : 500).json({
     success: false,
@@ -19,7 +19,7 @@ const handleError = (res: Response, error: unknown) => {
 };
 
 export const aboutController = {
-  // GET PUBLIC ABOUT PAGE
+  // PUBLIC ABOUT
   async getPublicAbout(_req: Request, res: Response) {
     try {
       const data = await aboutService.getPublicAbout();
@@ -33,7 +33,7 @@ export const aboutController = {
     }
   },
 
-  // GET ADMIN ABOUT PAGE
+  // ADMIN ABOUT
   async getAdminAbout(_req: Request, res: Response) {
     try {
       const data = await aboutService.getAdminAbout();
@@ -47,11 +47,11 @@ export const aboutController = {
     }
   },
 
-  // UPDATE ABOUT PAGE
+  // UPDATE COMPANY INFORMATION
   async updateAboutPage(req: Request, res: Response) {
     try {
       const data = await aboutService.updateAboutPage(
-        req.body ?? {},
+        req.body ?? {}
       );
 
       return res.status(200).json({
@@ -65,34 +65,29 @@ export const aboutController = {
   },
 
   // CREATE TEAM MEMBER
-createTeamMember: async (req: Request, res: Response) => {
-  try {
-    const imageUrl = req.file
-      ? `/uploads/team/${req.file.filename}`
-      : "";
+  async createTeamMember(req: Request, res: Response) {
+    try {
+      // imageUrl will contain the Cloudinary secure URL.
+      const data = await aboutService.createTeamMember(
+        req.body ?? {}
+      );
 
-    const result = await aboutService.createTeamMember({
-      ...req.body,
-      imageUrl,
-      displayOrder: Number(req.body.displayOrder || 0),
-    });
-
-    return res.status(201).json({
-      success: true,
-      message: "Team member added successfully.",
-      data: result,
-    });
-  } catch (error) {
-    return handleError(res, error);
-  }
-},
+      return res.status(201).json({
+        success: true,
+        message: "Team member added successfully.",
+        data,
+      });
+    } catch (error) {
+      return handleError(res, error);
+    }
+  },
 
   // UPDATE TEAM MEMBER
   async updateTeamMember(req: Request, res: Response) {
     try {
       const data = await aboutService.updateTeamMember(
         getParamId(req.params.id),
-        req.body ?? {},
+        req.body ?? {}
       );
 
       return res.status(200).json({
@@ -108,7 +103,9 @@ createTeamMember: async (req: Request, res: Response) => {
   // DELETE TEAM MEMBER
   async deleteTeamMember(req: Request, res: Response) {
     try {
-      await aboutService.deleteTeamMember(getParamId(req.params.id));
+      await aboutService.deleteTeamMember(
+        getParamId(req.params.id)
+      );
 
       return res.status(200).json({
         success: true,
@@ -119,16 +116,16 @@ createTeamMember: async (req: Request, res: Response) => {
     }
   },
 
-  // CREATE FEATURE
+  // CREATE GOAL / FEATURE
   async createFeature(req: Request, res: Response) {
     try {
       const data = await aboutService.createFeature(
-        req.body ?? {},
+        req.body ?? {}
       );
 
       return res.status(201).json({
         success: true,
-        message: "Feature added successfully.",
+        message: "Goal added successfully.",
         data,
       });
     } catch (error) {
@@ -136,17 +133,17 @@ createTeamMember: async (req: Request, res: Response) => {
     }
   },
 
-  // UPDATE FEATURE
+  // UPDATE GOAL / FEATURE
   async updateFeature(req: Request, res: Response) {
     try {
       const data = await aboutService.updateFeature(
         getParamId(req.params.id),
-        req.body ?? {},
+        req.body ?? {}
       );
 
       return res.status(200).json({
         success: true,
-        message: "Feature updated successfully.",
+        message: "Goal updated successfully.",
         data,
       });
     } catch (error) {
@@ -154,14 +151,16 @@ createTeamMember: async (req: Request, res: Response) => {
     }
   },
 
-  // DELETE FEATURE
+  // DELETE GOAL / FEATURE
   async deleteFeature(req: Request, res: Response) {
     try {
-      await aboutService.deleteFeature(getParamId(req.params.id));
+      await aboutService.deleteFeature(
+        getParamId(req.params.id)
+      );
 
       return res.status(200).json({
         success: true,
-        message: "Feature deleted successfully.",
+        message: "Goal deleted successfully.",
       });
     } catch (error) {
       return handleError(res, error);
