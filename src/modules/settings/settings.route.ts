@@ -1,7 +1,11 @@
-
-import { Router, type Response, type NextFunction } from "express";
+import {
+  Router,
+  type Response,
+  type NextFunction,
+} from "express";
 
 import { settingsController } from "./settings.controller";
+
 import {
   authMiddleware,
   type AuthRequest,
@@ -15,7 +19,16 @@ const adminOnly = (
   res: Response,
   next: NextFunction,
 ) => {
-  if (req.admin?.role !== "ADMIN") {
+  const allowedRoles = [
+    "ADMIN",
+    "SUPER_ADMIN",
+  ];
+
+  const userRole = req.admin?.role
+    ?.trim()
+    .toUpperCase();
+
+  if (!userRole || !allowedRoles.includes(userRole)) {
     return res.status(403).json({
       success: false,
       message: "Access denied. Admin only.",
@@ -25,13 +38,25 @@ const adminOnly = (
   next();
 };
 
-// Public: Customer can read store settings
-router.get("/public", settingsController.getPublicSettings);
+// Public settings
+router.get(
+  "/public",
+  settingsController.getPublicSettings,
+);
 
-// Admin: Only authenticated admins can read settings
-router.get("/", authMiddleware, adminOnly, settingsController.getSettings);
+// Admin settings
+router.get(
+  "/",
+  authMiddleware,
+  adminOnly,
+  settingsController.getSettings,
+);
 
-// Admin: Only authenticated admins can update settings
-router.patch("/", authMiddleware, adminOnly, settingsController.updateSettings);
+router.patch(
+  "/",
+  authMiddleware,
+  adminOnly,
+  settingsController.updateSettings,
+);
 
 export default router;
